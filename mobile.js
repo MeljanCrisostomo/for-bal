@@ -20,7 +20,9 @@ class Paper {
   init(paper) {
     paper.addEventListener('touchmove', (e) => {
       e.preventDefault();
-      if(!this.rotating) {
+      e.stopPropagation(); // Prevent scrolling
+
+      if (!this.rotating) {
         this.touchMoveX = e.touches[0].clientX;
         this.touchMoveY = e.touches[0].clientY;
         
@@ -30,19 +32,20 @@ class Paper {
         
       const dirX = e.touches[0].clientX - this.touchStartX;
       const dirY = e.touches[0].clientY - this.touchStartY;
-      const dirLength = Math.sqrt(dirX*dirX+dirY*dirY);
+      const dirLength = Math.sqrt(dirX * dirX + dirY * dirY);
       const dirNormalizedX = dirX / dirLength;
       const dirNormalizedY = dirY / dirLength;
 
       const angle = Math.atan2(dirNormalizedY, dirNormalizedX);
       let degrees = 180 * angle / Math.PI;
       degrees = (360 + Math.round(degrees)) % 360;
-      if(this.rotating) {
+      
+      if (this.rotating) {
         this.rotation = degrees;
       }
 
-      if(this.holdingPaper) {
-        if(!this.rotating) {
+      if (this.holdingPaper) {
+        if (!this.rotating) {
           this.currentPaperX += this.velX;
           this.currentPaperY += this.velY;
         }
@@ -51,10 +54,10 @@ class Paper {
 
         paper.style.transform = `translateX(${this.currentPaperX}px) translateY(${this.currentPaperY}px) rotateZ(${this.rotation}deg)`;
       }
-    })
+    });
 
     paper.addEventListener('touchstart', (e) => {
-      if(this.holdingPaper) return; 
+      if (this.holdingPaper) return;
       this.holdingPaper = true;
       
       paper.style.zIndex = highestZ;
@@ -65,19 +68,25 @@ class Paper {
       this.prevTouchX = this.touchStartX;
       this.prevTouchY = this.touchStartY;
     });
+
     paper.addEventListener('touchend', () => {
       this.holdingPaper = false;
       this.rotating = false;
     });
 
-    // For two-finger rotation on touch screens
-    paper.addEventListener('gesturestart', (e) => {
-      e.preventDefault();
-      this.rotating = true;
+    // For pinch gestures or multi-touch, handling rotating through touchmove
+    paper.addEventListener('touchmove', (e) => {
+      if (e.touches.length > 1 && !this.rotating) {
+        // Detect rotation between two fingers (pinch gesture)
+        const touch1 = e.touches[0];
+        const touch2 = e.touches[1];
+        const angle = Math.atan2(touch2.clientY - touch1.clientY, touch2.clientX - touch1.clientX);
+        this.rotation = angle * 180 / Math.PI;
+        this.rotating = true;
+      }
     });
-    paper.addEventListener('gestureend', () => {
-      this.rotating = false;
-    });
+
+    // Additional handling if needed for two-finger touch
   }
 }
 
