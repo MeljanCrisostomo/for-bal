@@ -6,8 +6,6 @@ class Paper {
   touchStartY = 0;
   touchMoveX = 0;
   touchMoveY = 0;
-  touchEndX = 0;
-  touchEndY = 0;
   prevTouchX = 0;
   prevTouchY = 0;
   velX = 0;
@@ -18,18 +16,31 @@ class Paper {
   rotating = false;
 
   init(paper) {
-    paper.addEventListener('touchmove', (e) => {
+    paper.addEventListener("touchmove", (e) => {
       e.preventDefault();
       e.stopPropagation(); // Prevent scrolling
 
       if (!this.rotating) {
         this.touchMoveX = e.touches[0].clientX;
         this.touchMoveY = e.touches[0].clientY;
-        
+
         this.velX = this.touchMoveX - this.prevTouchX;
         this.velY = this.touchMoveY - this.prevTouchY;
       }
-        
+
+      // Handle rotation if multi-touch is detected
+      if (e.touches.length > 1 && !this.rotating) {
+        const touch1 = e.touches[0];
+        const touch2 = e.touches[1];
+        const angle = Math.atan2(
+          touch2.clientY - touch1.clientY,
+          touch2.clientX - touch1.clientX
+        );
+        this.rotation = (angle * 180) / Math.PI;
+        this.rotating = true;
+      }
+
+      // Handle dragging of paper
       const dirX = e.touches[0].clientX - this.touchStartX;
       const dirY = e.touches[0].clientY - this.touchStartY;
       const dirLength = Math.sqrt(dirX * dirX + dirY * dirY);
@@ -37,9 +48,9 @@ class Paper {
       const dirNormalizedY = dirY / dirLength;
 
       const angle = Math.atan2(dirNormalizedY, dirNormalizedX);
-      let degrees = 180 * angle / Math.PI;
+      let degrees = (180 * angle) / Math.PI;
       degrees = (360 + Math.round(degrees)) % 360;
-      
+
       if (this.rotating) {
         this.rotation = degrees;
       }
@@ -56,43 +67,38 @@ class Paper {
       }
     });
 
-    paper.addEventListener('touchstart', (e) => {
+    paper.addEventListener("touchstart", (e) => {
       if (this.holdingPaper) return;
       this.holdingPaper = true;
-      
+
       paper.style.zIndex = highestZ;
       highestZ += 1;
-      
+
       this.touchStartX = e.touches[0].clientX;
       this.touchStartY = e.touches[0].clientY;
       this.prevTouchX = this.touchStartX;
       this.prevTouchY = this.touchStartY;
     });
 
-    paper.addEventListener('touchend', () => {
+    paper.addEventListener("touchend", () => {
       this.holdingPaper = false;
       this.rotating = false;
     });
 
-    // For pinch gestures or multi-touch, handling rotating through touchmove
-    paper.addEventListener('touchmove', (e) => {
-      if (e.touches.length > 1 && !this.rotating) {
-        // Detect rotation between two fingers (pinch gesture)
-        const touch1 = e.touches[0];
-        const touch2 = e.touches[1];
-        const angle = Math.atan2(touch2.clientY - touch1.clientY, touch2.clientX - touch1.clientX);
-        this.rotation = angle * 180 / Math.PI;
-        this.rotating = true;
-      }
-    });
-
-    // Additional handling if needed for two-finger touch
+    // Prevent scrolling or zooming globally
+    document.body.addEventListener(
+      "touchstart",
+      (e) => {
+        e.preventDefault();
+      },
+      { passive: false }
+    );
   }
 }
 
-const papers = Array.from(document.querySelectorAll('.paper'));
+const papers = Array.from(document.querySelectorAll(".paper"));
 
-papers.forEach(paper => {
+papers.forEach((paper) => {
   const p = new Paper();
   p.init(paper);
 });
